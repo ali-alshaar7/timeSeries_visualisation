@@ -18,67 +18,60 @@ from tkinter import ALL
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg #new
 import numpy as np #new
 
 
 class mclass:
-    def __init__(self, window):
+    def __init__(self, window, dir):
         self.window = window
+        self.window.geometry("500x500")
         self.canvas = None
-        self.button = Button(window, text="Plot Surface", command=self.plot_IBL)
+        self.data = open_file(dir)
+        self.x1 = 0
+        self.x2 = 100
+        self.button = Button(window, text="Plot", command=self.plot)
+        self.zoom_button = Button(window, text="zoom out", command=self.zoom_o)
+        self.zoom_in_button = Button(window, text="zoom in", command=self.zoom_i)
         self.clear_button = Button(window, text="Clear Space", command=self.clear_space)
-        self.button.pack(side="left")
-        self.clear_button.pack(side="left")
+        self.button.pack(side="top")
+        self.zoom_button.pack(side="top")
+        self.zoom_in_button.pack(side="top")
+        self.clear_button.pack(side="top")
 
     def clear_space(self): #new
         self.canvas._tkcanvas.destroy()
-        #global main, root
-        #main.destroy()
-        #main = Frame(root)
-        #main.pack()
 
-    def plot_IBL(self):
-        fig = Figure(figsize=(4, 4))
+    def plot(self):
+        fig = Figure(figsize=(15, 12))
         self.canvas = FigureCanvasTkAgg(fig, master=self.window)
         self.canvas.get_tk_widget().pack()
         self.canvas._tkcanvas.pack(side="top", fill="both", expand=1)
         base = "dummy text" #new
-        a = fig.add_subplot(111, projection="3d")
-        a.set_title(base, fontsize=16)
-        a.set_ylabel("Y", fontsize=14)
-        a.set_xlabel("X", fontsize=14)
-        a.set_zlabel("Z", fontsize=14)
+        a = fig.add_subplot(111)
+        a.set_facecolor('xkcd:black')
+        a.spines['top'].set_visible(False)
+        a.spines['right'].set_visible(False)
+        a.spines['bottom'].set_visible(False)
+        a.spines['left'].set_visible(False)
+        a.plot(self.data['continuous'][0][ self.x1 : self.x2 ])
         
-        #new: draw something
-        # https://matplotlib.org/2.0.0/examples/mplot3d/trisurf3d_demo.html
-        n_radii = 8
-        n_angles = 36
-
-        # Make radii and angles spaces (radius r=0 omitted to eliminate duplication).
-        radii = np.linspace(0.125, 1.0, n_radii)
-        angles = np.linspace(0, 2*np.pi, n_angles, endpoint=False)
-
-        # Repeat all angles for each radius.
-        angles = np.repeat(angles[..., np.newaxis], n_radii, axis=1)
-
-        # Convert polar (radii, angles) coords to cartesian (x, y) coords.
-        # (0, 0) is manually added at this stage,  so there will be no duplicate
-        # points in the (x, y) plane.
-        x = np.append(0, (radii*np.cos(angles)).flatten())
-        y = np.append(0, (radii*np.sin(angles)).flatten())
-
-        # Compute z to make the pringle surface.
-        z = np.sin(-x*y)
-        a.plot_trisurf(x, y, z)
         
-        '''
-        a.plot_trisurf(x_prime, y_prime, z_prime, triangles=tri.triangles)
-        a.plot_trisurf(x_negprime, y_prime, z_prime, triangles=tri.triangles)
-        a.plot_trisurf(x_negprime, y_negprime, z_prime, triangles=tri.triangles)
-        '''
+        
         self.canvas.draw()
 
+    def zoom_o(self):
+        self.x2 += 100
+        self.clear_space()
+        self.plot()
+
+    def zoom_i(self):
+        self.x2 -= 100
+        if self.x2 < 100:
+            self.x2 = 100
+        self.clear_space()
+        self.plot()
+
 root = Tk() #new
-my_mclass = mclass(root) #new
+dir = r'C:\Users\alish\Desktop\current_year\xcelleration\ephys2nwb\OPEN_EPHYS\nwbnew.nwb'
+my_mclass = mclass(root, dir) #new
 root.mainloop() #new
