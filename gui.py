@@ -44,7 +44,7 @@ class mclass:
         self.zoom_button = Button(window, text="zoom out", command=self.zoom_o)
         self.zoom_in_button = Button(window, text="zoom in", command=self.zoom_i)
         self.clear_button = Button(window, text="Clear Space", command=self.clear_space)
-        self.file_select = Button(window, text="Select File", command=self.select_file)
+        self.file_select = Button(window, text="Select NWB File", command=self.select_file)
         self.set_plot_window = Button(window, text="set plot window", command=self.trunc_set)
 
         self.start_x_entry = Entry(self.truncate, textvariable=self.start_x)
@@ -66,10 +66,8 @@ class mclass:
 
         if self.is_there_plot == True:
             self.clear_space()
-
-        self.is_there_plot = True
         
-        print(self.channel_option.get())
+        self.is_there_plot = True
         self.channel = self.data['continuous'][int(float(self.channel_option.get()))]
 
         self.zoom_button.pack(side="top")
@@ -191,8 +189,14 @@ class mclass:
 
         self.plot()
 
+    def select_ophys(self):
+
+        filename = tk.filedialog.askdirectory(parent=root,initialdir="/",
+                    title='Please select a directory')
+
 
 
 root = Tk() #new
+root.title("xCELLeration time series viewer")
 my_mclass = mclass(root) #new
 root.mainloop() #new
