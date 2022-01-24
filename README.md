@@ -1,7 +1,7 @@
 # timeSeries_visualisation
 
 <p align="center">
-  <img src="images/1.jpg" width="350" title="hover text">
+  <img src="images/1.png" width="350" title="hover text">
 </p>
 current GUI
 
