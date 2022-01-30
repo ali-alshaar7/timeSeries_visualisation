@@ -2,7 +2,7 @@ import tkinter as tk
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, 
 NavigationToolbar2Tk)
-from nwb_loader import open_file
+from nwb_loader import open_file, open_ephys_dir, convert_ephys_nwb
 
 from matplotlib.figure import Figure
 from tkinter import *
@@ -13,149 +13,218 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 import numpy as np #new
+from PIL import Image, ImageTk
 
+import time
 
-class mclass:
-    def __init__(self, window):
-        self.window = window
+class Button_icons:
+    def __init__( self ):
+        self.root = r"C:\Users\alish\Desktop\current_year\xcelleration\ts_visualisation\images\icons"
+        self.zoom_in = ImageTk.PhotoImage(Image.open( os.path.join(self.root, "zoom_in.png") ).resize((20,20), resample = Image.BILINEAR) ) 
+        self.zoom_out = ImageTk.PhotoImage(Image.open( os.path.join(self.root, "zoom_out.png") ).resize((20,20), resample = Image.BILINEAR) ) 
+        
+        self.pan_right =ImageTk.PhotoImage(Image.open( os.path.join(self.root, "pan_right.png") ).resize((20,20), resample = Image.BILINEAR) ) 
+        self.pan_left = ImageTk.PhotoImage(Image.open( os.path.join(self.root, "pan_left.png") ).resize((20,20), resample = Image.BILINEAR) ) 
 
-        self.window.bind("<MouseWheel>", self.mouse_wheel)
-        self.window.bind('<B1-Motion>', self.pan)  
-        self.window.bind('<1>', self.initialise_pan)   
+        self.truncate = ImageTk.PhotoImage(Image.open( os.path.join(self.root, "truncate.png") ).resize((20,20), resample = Image.BILINEAR) ) 
+        self.plot = ImageTk.PhotoImage(Image.open( os.path.join(self.root, "plot.png") ).resize((20,20), resample = Image.BILINEAR) ) 
+        self.select_nwb = ImageTk.PhotoImage(Image.open( os.path.join(self.root, "select_nwb.jpg") ).resize((20,20), resample = Image.BILINEAR) ) 
+        self.clear = ImageTk.PhotoImage(Image.open( os.path.join(self.root, "clear.png") ).resize((20,20), resample = Image.BILINEAR) ) 
+        self.export = ImageTk.PhotoImage(Image.open( os.path.join(self.root, "export.png") ).resize((20,20), resample = Image.BILINEAR) ) 
 
-        self.window.geometry("1000x500")
-        self.canvas = None
-        self.data = []
-        self.channel = []
-        self.truncate = tk.Frame(root)
+class Channel_window:
+    def __init__(self,root, dat, X1, Zoom, from_ephys, dir ):
 
-        self.x1 = 0
-        self.zoom = 100
-        self.initial_B1_x = 0
-        self.initial_B1_y = 0
+        self.from_ephys = from_ephys
+        self.root_path = dir
+
+        self.data = dat
+
         self.start_x = tk.StringVar()
         self.end_x = tk.StringVar()
-        self.channel_option = tk.StringVar()
-        self.channel_option.set("0")
-        self.channel_options = []
-        self.is_there_plot = False
 
-        self.plot_button = Button(window, text="Plot", command=self.plot)
-        self.zoom_button = Button(window, text="zoom out", command=self.zoom_o)
-        self.zoom_in_button = Button(window, text="zoom in", command=self.zoom_i)
-        self.clear_button = Button(window, text="Clear Space", command=self.clear_space)
-        self.file_select = Button(window, text="Select NWB File", command=self.select_file)
-        self.set_plot_window = Button(window, text="set plot window", command=self.trunc_set)
+        self.x1 = X1
+        self.zoom = Zoom
+        self.canvas = None
 
-        self.start_x_entry = Entry(self.truncate, textvariable=self.start_x)
-        self.end_x_entry = Entry(self.truncate, textvariable=self.end_x)
+        self.icons = Button_icons()
 
-        self.truncate.pack(side="top")
+        self.chan_frame = tk.Frame(root)
+        self.plot_frame = tk.Frame(root)
 
-        self.file_select.pack(side="top")
+        self.grid_on = BooleanVar()
+        self.plot_color = StringVar()
+        self.plot_color.set('black')
+
+        self.zoom_button = Button(self.chan_frame, text="zoom out", command=self.zoom_o, 
+                                image = self.icons.zoom_out)
+        self.zoom_in_button = Button(self.chan_frame, text="zoom in", command=self.zoom_i,
+                                image = self.icons.zoom_in)
+
+        self.pan_right_button = Button(self.chan_frame, text="pan right", command=self.pan_right,
+                                image = self.icons.pan_right)
+        self.pan_left_button = Button(self.chan_frame, text="pan left", command=self.pan_left,
+                                image = self.icons.pan_left)
+
+        self.clear_button = Button(self.chan_frame, text="Clear Space", command=self.clear_space,
+                                image = self.icons.clear)
+        self.set_plot_window = Button(self.chan_frame, text="set plot window", command=self.trunc_set,
+                                image = self.icons.truncate)
+
+        self.export = Button(self.chan_frame, text="export to NWB", command=self.export_nwb,
+                                image = self.icons.export)
+
+        self.start_x_entry = Entry(self.chan_frame, textvariable=self.start_x)
+        self.end_x_entry = Entry(self.chan_frame, textvariable=self.end_x)
+
+        color_options = ["black", "blue", "white", "green"] 
+        self.check_grid = Checkbutton(self.chan_frame, text="grid", variable=self.grid_on, command=self.set_grid)
+        self.plot_color_select = OptionMenu( self.chan_frame , self.plot_color,
+                                    *color_options , command = self.set_color)
+        
+        self.grid_on.set(True)
+        self.check_grid.grid_on = self.grid_on
+
+        self.chan_frame.pack(side="top")
+        self.plot_frame.pack(side="top")
 
     def clear_space(self): #new
         self.canvas._tkcanvas.destroy()
-        self.is_there_plot = False
 
-    def plot(self):
+    def set_color(self, event):
+        self.plot(True)
+    def set_grid(self):
+        self.plot(True)
+    
+    def zoom_o(self):
 
-        if self.data == []:
-            print("Please select a file")
-            return
+        self.zoom *= 2
+        self.plot(True)
 
-        if self.is_there_plot == True:
-            self.clear_space()
+    def zoom_i(self):
+
+        self.zoom = int(self.zoom/2)
+        if self.zoom < 100:
+            self.zoom = 100
+
+        self.plot(True)
+    
+    def pan_right(self):
         
-        self.is_there_plot = True
-        self.channel = self.data['continuous'][int(float(self.channel_option.get()))]
+        self.x1 += int(self.zoom/2)
+        if self.x1 >= self.data.size - 1 - self.zoom:
+            self.x1 = self.data.size - 1 - self.zoom
+        self.plot(True)
+    
+    def pan_left(self):
 
-        self.zoom_button.pack(side="top")
-        self.zoom_in_button.pack(side="top")
-        self.clear_button.pack(side="top")
+        self.x1 -= int(self.zoom/2)
+        if self.x1 < 0:
+            self.x1 = 0
+        self.plot(True)
+    
+    def trunc_set(self):
 
-        self.start_x_entry.pack(side="top")
-        self.end_x_entry.pack(side="top")
-        self.set_plot_window.pack(side="top")
+        self.x1 = int(self.start_x.get())
+        self.zoom = int(self.end_x.get()) - int(self.x1)
+
+        if self.x1 < 0:
+            self.x1 = 0
+        elif self.x1 >= self.data.size - 1 - self.zoom:
+            self.x1 = self.data.size - 1 - self.zoom
+
+        self.plot(True)
+
+    def export_nwb(self):
+        files = [('NWB Files', '*.nwb'), ('All Files', '*.*')]
+        file = tk.filedialog.asksaveasfile(filetypes = files, defaultextension = files)
+
+        convert_ephys_nwb(self.root_path, str(file.name) )
+
+    def plot(self, erase_bool):
+        start = time.time()
+
+        if erase_bool == True:
+            self.clear_space()
+        else:
+            self.set_plot_window.grid(row=0, column=1)
+            self.zoom_button.grid(row=0, column=2)
+            self.zoom_in_button.grid(row=0, column=3)
+            self.pan_left_button.grid(row=0, column=4)
+            self.pan_right_button.grid(row=0, column=5)
+            self.clear_button.grid(row=0, column=6)
+            self.plot_color_select .grid( row=0, column=7 )
+            self.check_grid.grid(row=0, column=8)
+            if self.from_ephys:
+                self.export.grid(row=1, column=1)
+
+
+            self.start_x_entry.grid(row=0, column=0)
+            self.end_x_entry.grid(row=1, column=0)
+
+        
+        s1 = time.time()
+
+        
 
         fig = Figure(figsize=(15, 12))
-        self.canvas = FigureCanvasTkAgg(fig, master=self.window)
+        self.canvas = FigureCanvasTkAgg(fig, master=self.plot_frame)
         self.canvas.get_tk_widget().pack()
         self.canvas._tkcanvas.pack(side="top", fill="both", expand=1)
 
+        s2 = time.time()
+
         a = fig.add_subplot(111)
-        a.set_facecolor('xkcd:black')
-        a.grid(color = 'brown')
+        a.set_facecolor( 'xkcd:' + self.plot_color.get() )
+
+        if bool(self.grid_on.get()):
+            a.grid(color = 'brown')
 
         a.spines['top'].set_visible(False)
         a.spines['right'].set_visible(False)
         a.spines['bottom'].set_visible(False)
         a.spines['left'].set_visible(False)
 
-        dat = self.channel
-
         a.plot( np.linspace(self.x1, self.zoom + self.x1, self.zoom ),
-                dat[ self.x1 : self.zoom + self.x1 ] )
+                self.data[ self.x1 : self.zoom + self.x1 ] )
         
-        
+        s3 = time.time()
         
         self.canvas.draw()
 
-    def zoom_o(self):
+        s4 = time.time()
 
-        if self.data == []:
-            print("Please select a file")
-            return
+        #print(s1 - start, s2 - s1, s3-s2, s4-s3)
+        
 
-        self.zoom += 100
-        self.plot()
+        
 
-    def zoom_i(self):
+class GUI:
+    def __init__(self, window):
+        self.window = window
 
-        if self.data == []:
-            print("Please select a file")
-            return
+        self.window.geometry("1000x500")
+        self.channels = []
 
-        self.zoom -= 100
-        if self.zoom < 100:
-            self.zoom = 100
+        self.channel_option = tk.IntVar()
+        self.channel_option.set("0")
+        self.channel_options = [0]
+        self.is_there_plot = False
 
-        self.plot()
+        self.plot_button = Button( window , text="Plot", command=self.plot)
+        self.file_select = Button( window, text="Select NWB File", command=self.select_file)
+        self.folder_select = Button( window, text="Select OPhys directory File", command=self.select_ophys)
 
-    def mouse_wheel(self, event):
+        self.file_select.pack(side="top")
+        self.folder_select.pack(side="top")
 
-        if self.data == []:
-            print("Please select a file")
-            return
+    def plot(self):
 
-        if event.num == 5 or event.delta == -120:
-            self.zoom_o()
-        if event.num == 4 or event.delta == 120:
-            self.zoom_i()
+        cur_plot = self.channels[ self.channel_option.get() ]
 
-    def pan(self, event):
+        cur_plot.plot(self.is_there_plot)
+        self.is_there_plot = True
 
-        if self.data == []:
-            print("Please select a file")
-            return
-
-        self.x1 += ( event.x -  self.initial_B1_x)
-
-        if self.x1 < 0:
-            self.x1 = 0
-        elif self.x1 >= self.channel.size - 1 - self.zoom:
-            self.x1 = self.channel.size - 1 - self.zoom
-
-        self.plot()
-
-    def initialise_pan(self, event):
-
-        if self.data == []:
-            print("Please select a file")
-            return
-
-        self.initial_B1_x = event.x
-        self.initial_B1_y = event.y
 
     def select_file(self):
         filetypes = (
@@ -168,35 +237,39 @@ class mclass:
             initialdir='/',
             filetypes=filetypes)
 
-        self.data = open_file(filename)
-        self.channel_options = np.linspace(0, len(self.data['continuous']) - 1 ,  
-                               len(self.data['continuous']) ).tolist()
+        dat = open_file(filename)
+        self.channel_options = np.linspace(0, len( dat['continuous']) - 1 ,  
+                               len( dat['continuous']) ).tolist()
 
-        self.chan_select_menu = OptionMenu(self.window ,self.channel_option, *self.channel_options )
+        for conts in dat['continuous']:
+            self.channels.append( Channel_window( self.window, conts, 0, 100, False, filename  ) )
+        
+        self.chan_select_menu = OptionMenu( self.window ,self.channel_option,*self.channel_options )
         
         self.plot_button.pack(side="top")
         self.chan_select_menu.pack(side="top")
 
-    def trunc_set(self):
-
-        self.x1 = int(self.start_x.get())
-        self.zoom = int(self.end_x.get()) - int(self.x1)
-
-        if self.x1 < 0:
-            self.x1 = 0
-        elif self.x1 >= self.channel.size - 1 - self.zoom:
-            self.x1 = self.channel.size - 1 - self.zoom
-
-        self.plot()
 
     def select_ophys(self):
 
         filename = tk.filedialog.askdirectory(parent=root,initialdir="/",
                     title='Please select a directory')
+        
+        dat = open_ephys_dir(filename)
+        self.channel_options = np.linspace(0, len( dat['continuous']) - 1 ,  
+                               len( dat['continuous']) ).tolist()
+
+        for conts in dat['continuous']:
+            self.channels.append( Channel_window( self.window, conts, 0, 100, True, filename ) )
+        
+        self.chan_select_menu = OptionMenu( self.window ,self.channel_option,*self.channel_options )
+        
+        self.plot_button.pack(side="top")
+        self.chan_select_menu.pack(side="top")
 
 
 
 root = Tk() #new
 root.title("xCELLeration time series viewer")
-my_mclass = mclass(root) #new
+my_mclass = GUI(root) #new
 root.mainloop() #new
