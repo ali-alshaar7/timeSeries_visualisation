@@ -13,8 +13,8 @@ current GUI
 - [x] pan across time series
 - [x] truncate to range
 - [ ] display multiple channels in parallel
-- [ ] toggle grid lines
-- [ ] select bakground/plot colour
+- [x] toggle grid lines
+- [x] select bakground/plot colour
 - [ ] load Open Ephys directory
 - [ ] Export to NWB feature
 - [ ] Concatanate time series
@@ -22,6 +22,6 @@ current GUI
 
 ### Optimizations and polishes- Todo list
 
-- [ ] button placement ( all square buttons at the top in one row. )
+- [x] button placement ( all square buttons at the top in one row. )
 - [ ] add icons to buttons instead of title ( with hover over help feature )
 - [ ] fix framerate when zooming and panning.
