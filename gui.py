@@ -57,6 +57,8 @@ class Button_icons:
         self.file2 = ImageTk.PhotoImage(Image.open( os.path.join(self.root, "file2.png") ).resize((20,20), resample = Image.BILINEAR) ) 
         self.metadata = ImageTk.PhotoImage(Image.open( os.path.join(self.root, "metadata.png") ).resize((20,20), resample = Image.BILINEAR) ) 
 
+        self.settings = ImageTk.PhotoImage(Image.open( os.path.join(self.root, "settings.png") ).resize((20,20), resample = Image.BILINEAR) ) 
+
 class conc_files:
     def __init__( self ):
         self.file1 = None
@@ -189,6 +191,17 @@ class Channel_window:
 
         self.grid_on = BooleanVar()
         self.plot_color = StringVar()
+        self.plot_line_color = []
+
+        for i in range(0,len(self.data) ):
+            s= StringVar()
+            s.set('white')
+            self.plot_line_color.append(s)
+
+        self.check_grid = None
+        self.plot_color_select = None
+        self.plot_line_color_select = [None] * len(self.data)
+
         self.plot_color.set('black')
 
         self.zoom_button = Button(self.chan_frame, text="zoom out", command=self.zoom_o, 
@@ -217,18 +230,15 @@ class Channel_window:
         self.export = Button(self.chan_frame, text="export to NWB", command=self.export_nwb,
                                 image = self.icons.export)
 
+        self.settings_button = Button(self.chan_frame, text="settings", command=self.settings,
+                                image = self.icons.settings)
+
         self.start_x_entry = Entry(self.chan_frame, textvariable=self.start_x)
         self.end_x_entry = Entry(self.chan_frame, textvariable=self.end_x)
-
-        color_options = ["black", "blue", "white", "green"] 
-        self.check_grid = Checkbutton(self.chan_frame, text="grid", variable=self.grid_on, command=self.set_grid)
-        self.plot_color_select = OptionMenu( self.chan_frame , self.plot_color,
-                                    *color_options , command = self.set_color)
 
         self.plot_frame.bind('<B1-Motion>', self.position )
 
         self.grid_on.set(True)
-        self.check_grid.grid_on = self.grid_on
 
         self.chan_frame.pack(side=TOP )
         self.plot_frame.pack(side=TOP )
@@ -236,10 +246,7 @@ class Channel_window:
     def clear_space(self): #new
         self.canvas._tkcanvas.destroy()
 
-    def set_color(self, event):
-        self.plot(True, None)
-
-    def set_grid(self):
+    def set_color(self):
         self.plot(True, None)
     
     def zoom_o(self):
@@ -327,8 +334,8 @@ class Channel_window:
     def concatanate_data(self):
 
         conc_win = Toplevel(self.root)
-        conc_win.title("New Window")
-        conc_win.geometry("300x300")
+        conc_win.title("Concatenate")
+        conc_win.geometry("200x200")
 
         file1_button = Button( conc_win , text="selct file 1", command=self.select_file1,
                                 image = self.icons.file1)
@@ -355,7 +362,30 @@ class Channel_window:
         x21_entry.grid(row=1, column=2)
         x22_entry.grid(row=2, column=2)
 
-    
+    def settings(self):
+
+        conc_win = Toplevel(self.root)
+        conc_win.title("Settings")
+        conc_win.geometry("50x400")
+
+        color_options = ["black", "blue", "white", "green", "red"] 
+        self.check_grid = Checkbutton( conc_win, text="grid", variable=self.grid_on)
+        self.plot_color_select = OptionMenu( conc_win , self.plot_color,
+                                    *color_options )
+        save_button = Button( conc_win , text="save", command=self.set_color )
+
+        self.check_grid.grid(row=0, column=0)
+        self.plot_color_select.grid(row=1, column=0)
+
+        for i in range(0, len(self.data)):
+            self.plot_line_color_select[i] = OptionMenu( conc_win , self.plot_line_color[i],
+                                    *color_options )
+
+            self.plot_line_color_select[i].grid(row= 2+i, column=0 )
+
+        self.check_grid.grid_on = self.grid_on
+        save_button.grid(row= 2+len(self.data) , column=0)
+
     def select_file1(self):
         filetypes = (
             ('nwb files', '*.continuous'),
@@ -407,11 +437,10 @@ class Channel_window:
             self.pan_left_button.grid(row=0, column=4)
             self.pan_right_button.grid(row=0, column=5)
             self.clear_button.grid(row=0, column=6)
-            self.plot_color_select .grid( row=0, column=7 )
-            self.check_grid.grid(row=0, column=8)
-            self.last_spike_button.grid( row=0, column=9 )
-            self.next_spike_button.grid( row=0, column=10 )
-            self.concatanate_button.grid( row=0, column=11 )
+            self.last_spike_button.grid( row=0, column=7 )
+            self.next_spike_button.grid( row=0, column=8 )
+            self.concatanate_button.grid( row=0, column=9 )
+            self.settings_button.grid( row=0, column=10 )
             if self.from_ephys:
                 self.export.grid(row=1, column=1)
 
@@ -437,23 +466,15 @@ class Channel_window:
         a.spines['left'].set_visible(False)
 
 
-        for dat in self.data:
+        for i, dat in enumerate(self.data):
             a.plot( np.linspace(self.x1, self.zoom + self.x1, self.zoom ),
-                dat[ self.x1 : self.zoom + self.x1 ] )
+                dat[ self.x1 : self.zoom + self.x1 ] , color = str(self.plot_line_color[i].get()) )
 
             if spike is not None:
                 sam_len = spike.shape[0]
                 a.plot( np.linspace(self.x1, sam_len + self.x1, sam_len ),
-                dat[ self.x1 : sam_len + self.x1 ],  linewidth=5.0 )
-        '''
-        if spike is not None:
-            sam_len = spike.shape[0]
-            print(sam_len)
-            for dat in np.swapaxes(spike, 0,1):
-                print(dat)
-                a.plot( np.linspace(self.x1, sam_len + self.x1, sam_len ),
-                    dat , linewidth=5.0 )
-        '''
+                dat[ self.x1 : sam_len + self.x1 ],  linewidth=5.0 , color = str(self.plot_line_color[i].get())  )
+
         s3 = time.time()
         
         self.canvas.draw()
