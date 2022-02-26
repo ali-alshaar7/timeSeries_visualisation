@@ -25,33 +25,30 @@ def open_file(dir):
     data['continuous'] = cont
     data['spikes'] = spikes
 
-    return data
+    return data, nwbfile
 
 def open_ephys_dir(dir):
+
+    nwbfile = convertOpenEphystoNWB(dir)
+
+    ephys_ts = nwbfile.acquisition
 
     data = {}
     cont = []
     spikes = []
-    spike_time = []
 
-    for files in os.listdir(dir):
-        if files.endswith('.continuous'):
-
-            r = load(os.path.join(dir, files))
-            cont.append( r['data'] )
-        elif files.endswith('.spikes'):
-
-            r = load(os.path.join(dir, files))
-            spikes.append( r['spikes'] )
-            spike_time.append( r['timestamps'] )
+    for f in ephys_ts:
+        if f.split('_')[0] == 'continuous':
+            cont.append(ephys_ts[f].data)
+        else:
+            spikes.append(ephys_ts[f])
 
     data['continuous'] = cont
     data['spikes'] = spikes
-    data['spike_time'] = spike_time
 
-    return data
+    return data, nwbfile
 
-def convert_ephys_nwb(src, save_path):
+def convert_ephys_nwb( nwbfile , save_path):
     io = NWBHDF5IO( save_path, mode='w')
-    io.write(convertOpenEphystoNWB(src))
+    io.write( nwbfile )
     io.close()

@@ -58,6 +58,8 @@ class Button_icons:
         self.metadata = ImageTk.PhotoImage(Image.open( os.path.join(self.root, "metadata.png") ).resize((20,20), resample = Image.BILINEAR) ) 
 
         self.settings = ImageTk.PhotoImage(Image.open( os.path.join(self.root, "settings.png") ).resize((20,20), resample = Image.BILINEAR) ) 
+        self.event = ImageTk.PhotoImage(Image.open( os.path.join(self.root, "event.png") ).resize((20,20), resample = Image.BILINEAR) ) 
+
 
 class conc_files:
     def __init__( self ):
@@ -142,46 +144,44 @@ class conc_files:
         io.write(nwbfile)
         io.close()
 
-
+class event_storage:
+    def __init__( self ):
+        self.event_flag = [ False, False, False]
+        self.event_markers = [tk.StringVar(), tk.StringVar() ]
+        self.event_series = []
+        self.event_name = tk.StringVar()
+        self.event_desc = tk.StringVar()
 
 class Channel_window:
-    def __init__(self,root, dat, X1, Zoom, from_ephys, dir , spike, spike_time):
+    def __init__(self, root, dat, X1, Zoom, from_ephys, dir , spike, file_obj):
 
         self.from_ephys = from_ephys
         self.root = root
+        self.nwb_obj = file_obj
         self.root_path = dir
 
         self.big_data = dat
         self.big_spike = spike
-        self.big_spike_time = spike_time
 
-        if from_ephys == False:
-            self.data = self.big_data
-            if self.big_spike is not None:
-                self.spike = self.big_spike[0].data
-                self.spike_time = self.big_spike_time[0].timestamps
-            else:
-                self.spike = None
-                self.spike_time = None
+        self.data = self.big_data
+        if self.big_spike is not None:
+            self.spike = self.big_spike[0].data
+            self.spike_time = self.big_spike[0].timestamps
         else:
-            self.data = self.big_data
-            if self.big_spike is not None:
-                self.spike = self.big_spike[0]
-                self.spike_time = self.big_spike_time[0]
-            else:
-                self.spike = None
-                self.spike_time = None
+            self.spike = None
+            self.spike_time = None
 
         self.conc_files = conc_files()
+        self.icons = Button_icons()
+        self.event_adder = event_storage()
 
         self.start_x = tk.StringVar()
         self.end_x = tk.StringVar()
 
+
         self.x1 = X1
         self.zoom = Zoom
         self.cur_spike = None
-
-        self.icons = Button_icons()
 
         self.chan_frame = tk.Frame(root)
         self.plot_frame = tk.Frame(root)
@@ -233,6 +233,9 @@ class Channel_window:
         self.settings_button = Button(self.chan_frame, text="settings", command=self.settings,
                                 image = self.icons.settings)
 
+        self.event_button = Button(self.chan_frame, text="add event", command=self.add_event,
+                                image = self.icons.event)
+
         self.start_x_entry = Entry(self.chan_frame, textvariable=self.start_x)
         self.end_x_entry = Entry(self.chan_frame, textvariable=self.end_x)
 
@@ -242,6 +245,15 @@ class Channel_window:
 
         self.chan_frame.pack(side=TOP )
         self.plot_frame.pack(side=TOP )
+
+    def add_event(self):
+        self.event_adder.event_flag[0] = ~self.event_adder.event_flag[0]
+        if( self.event_adder.event_flag[0] ):
+
+            for dat in self.data:
+                dat[ int(float(str(self.event_adder.event_markers[0]))) , int(float(str(self.event_adder.event_markers[1]))) ]
+        
+
 
     def clear_space(self): #new
         self.canvas._tkcanvas.destroy()
@@ -274,7 +286,6 @@ class Channel_window:
     def next_spike(self):
         if self.spike is not None:
             for spike, time_stamp in zip(  np.array(self.spike) , np.array(self.spike_time)  ):
-                print(spike.shape, time_stamp)
                 if time_stamp >= self.x1 and self.cur_spike != time_stamp:
                     self.cur_spike = time_stamp
                     self.x1 = int(time_stamp)
@@ -326,7 +337,7 @@ class Channel_window:
         files = [('NWB Files', '*.nwb'), ('All Files', '*.*')]
         file = tk.filedialog.asksaveasfile(filetypes = files, defaultextension = files)
 
-        convert_ephys_nwb(self.root_path, str(file.name) )
+        convert_ephys_nwb(self.nwb_obj, str(file.name) )
 
     def position(self, event):
         print(event.x)
@@ -366,25 +377,31 @@ class Channel_window:
 
         conc_win = Toplevel(self.root)
         conc_win.title("Settings")
-        conc_win.geometry("50x400")
+        conc_win.geometry("1000x400")
+
+        channel_color_label = [None] * len(self.data)
 
         color_options = ["black", "blue", "white", "green", "red"] 
         self.check_grid = Checkbutton( conc_win, text="grid", variable=self.grid_on)
         self.plot_color_select = OptionMenu( conc_win , self.plot_color,
                                     *color_options )
+        plot_color_label = Label( conc_win, text="plot background color" )
         save_button = Button( conc_win , text="save", command=self.set_color )
 
-        self.check_grid.grid(row=0, column=0)
-        self.plot_color_select.grid(row=1, column=0)
+        self.check_grid.grid(row=0, column=1)
+        plot_color_label.grid(row=1, column=0)
+        self.plot_color_select.grid(row=1, column=1)
 
         for i in range(0, len(self.data)):
             self.plot_line_color_select[i] = OptionMenu( conc_win , self.plot_line_color[i],
                                     *color_options )
+            channel_color_label[i] = Label( conc_win, text=f"channel {i} plot color" )
 
-            self.plot_line_color_select[i].grid(row= 2+i, column=0 )
+            self.plot_line_color_select[i].grid(row= 2+i, column=1 )
+            channel_color_label[i].grid(row=2+i, column=0)
 
         self.check_grid.grid_on = self.grid_on
-        save_button.grid(row= 2+len(self.data) , column=0)
+        save_button.grid(row= 2+len(self.data) , column=1)
 
     def select_file1(self):
         filetypes = (
@@ -441,6 +458,7 @@ class Channel_window:
             self.next_spike_button.grid( row=0, column=8 )
             self.concatanate_button.grid( row=0, column=9 )
             self.settings_button.grid( row=0, column=10 )
+            self.event_button.grid( row=0, column=11 )
             if self.from_ephys:
                 self.export.grid(row=1, column=1)
 
@@ -494,9 +512,6 @@ class GUI:
         self.icons = Button_icons()
         self.channels = None
 
-        self.channel_option = tk.IntVar()
-        self.channel_option.set("0")
-        self.channel_options = [0]
         self.is_there_plot = False
 
         self.plot_button = Button( window , text="Plot", image = self.icons.plot, command=self.plot)
@@ -529,15 +544,13 @@ class GUI:
             initialdir='/',
             filetypes=filetypes)
 
-        dat = open_file(filename)
-        self.channel_options = np.linspace(0, len( dat['continuous']) - 1 ,  
-                               len( dat['continuous']) ).tolist()
+        dat, nwbfile = open_file(filename)
 
         s = np.array(dat['spikes']) 
         if len(s) == 0:
             s = None
         self.channels = Channel_window( self.window, dat['continuous'], 0, 100, False, filename,
-                                        s, s )
+                                        s, nwbfile)
         
         
         self.plot_button.pack(side=LEFT, anchor=NW)
@@ -547,19 +560,16 @@ class GUI:
 
         filename = tk.filedialog.askdirectory(parent=root,initialdir="/",
                     title='Please select a directory')
-        
-        dat = open_ephys_dir(filename)
-        self.channel_options = np.linspace(0, len( dat['continuous']) - 1 ,  
-                               len( dat['continuous']) ).tolist()
+
+        dat, nwbfile = open_ephys_dir(filename)
 
         s = np.array(dat['spikes']) 
-        t = np.array(dat['spike_time'])
         if len(s) == 0:
             s = None
-        if len(t) == 0:
-            t = None
-        self.channels = Channel_window( self.window, dat['continuous'] , 0, 100, True, filename,
-                                        s, t )
+
+        self.channels = Channel_window( self.window, dat['continuous'], 0, 100, False, filename,
+                                        s, nwbfile)
+
         self.plot_button.pack(side=LEFT, anchor=NW)
 
 
