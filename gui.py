@@ -21,7 +21,7 @@ import matplotlib.tri as mtri
 import numpy as np #new
 from PIL import Image, ImageTk
 
-from OpenEphys_to_NWB import openephys2nwb, OpenEphys, defaults
+from OpenEphys_to_NWB import openephys2nwb, OpenEphys , defaults
 from OpenEphys import load
 from defaults import default_metadata
 from openephys2nwb import readMetaData
@@ -59,6 +59,8 @@ class Button_icons:
 
         self.settings = ImageTk.PhotoImage(Image.open( os.path.join(self.root, "settings.png") ).resize((20,20), resample = Image.BILINEAR) ) 
         self.event = ImageTk.PhotoImage(Image.open( os.path.join(self.root, "event.png") ).resize((20,20), resample = Image.BILINEAR) ) 
+
+        self.save = ImageTk.PhotoImage(Image.open( os.path.join(self.root, "save.png") ).resize((20,20), resample = Image.BILINEAR) ) 
 
 
 class conc_files:
@@ -145,19 +147,36 @@ class conc_files:
         io.close()
 
 class event_storage:
-    def __init__( self ):
-        self.event_flag = [ False, False, False]
-        self.event_markers = [tk.StringVar(), tk.StringVar() ]
-        self.event_series = []
+    def __init__( self, parent ):
+        self.event_flag = [ False, False ]
+        self.borders = [125, 900, 50]
+        self.event_markers = [ 0, 0  ]
+        self.cur_data = []
         self.event_name = tk.StringVar()
         self.event_desc = tk.StringVar()
+        self.parent = parent
+
+    def save(self):
+        norm = self.parent.zoom/(self.borders[1] - self.borders[0])
+        x1 = int(self.event_markers[0] * norm)
+        x2 = int(self.event_markers[1] * norm)
+
+        it_series = TimeSeries(name = self.event_name.get(), data =  self.cur_data
+                                                ,timestamps = np.linspace(x1 +self.parent.x1, 
+                                                x2 + self.parent.x1 , x2-x1 ), unit = 'v', 
+                                                description = self.event_desc.get() )
+
+        self.parent.nwb_obj.add_acquisition(it_series )
+
+        
 
 class Channel_window:
-    def __init__(self, root, dat, X1, Zoom, from_ephys, dir , spike, file_obj):
+    def __init__(self, root, dat, X1, Zoom, from_ephys, dir , spike, file_obj, io):
 
         self.from_ephys = from_ephys
         self.root = root
         self.nwb_obj = file_obj
+        self.io = io
         self.root_path = dir
 
         self.big_data = dat
@@ -173,7 +192,7 @@ class Channel_window:
 
         self.conc_files = conc_files()
         self.icons = Button_icons()
-        self.event_adder = event_storage()
+        self.event_adder = event_storage(self)
 
         self.start_x = tk.StringVar()
         self.end_x = tk.StringVar()
@@ -185,6 +204,7 @@ class Channel_window:
 
         self.chan_frame = tk.Frame(root)
         self.plot_frame = tk.Frame(root)
+
         self.figure = None
         self.canvas = None
         
@@ -229,6 +249,8 @@ class Channel_window:
 
         self.export = Button(self.chan_frame, text="export to NWB", command=self.export_nwb,
                                 image = self.icons.export)
+        self.save_button = Button(self.chan_frame, text="save file", command=self.save_nwb,
+                                image = self.icons.save)
 
         self.settings_button = Button(self.chan_frame, text="settings", command=self.settings,
                                 image = self.icons.settings)
@@ -239,21 +261,46 @@ class Channel_window:
         self.start_x_entry = Entry(self.chan_frame, textvariable=self.start_x)
         self.end_x_entry = Entry(self.chan_frame, textvariable=self.end_x)
 
-        self.plot_frame.bind('<B1-Motion>', self.position )
 
         self.grid_on.set(True)
 
         self.chan_frame.pack(side=TOP )
         self.plot_frame.pack(side=TOP )
 
+        self.root.bind( '<Button-1>', self.initial_pos )
+        self.root.bind( '<B1-Motion>', self.final_pos )
+
     def add_event(self):
-        self.event_adder.event_flag[0] = ~self.event_adder.event_flag[0]
+
         if( self.event_adder.event_flag[0] ):
+            self.event_adder.event_flag[0] = False
+            cur_data = []
+            norm = self.zoom/(self.event_adder.borders[1] - self.event_adder.borders[0])
+            x1 = int(self.event_adder.event_markers[0] * norm) +self.x1
+            x2 = int(self.event_adder.event_markers[1] * norm) +self.x1
 
             for dat in self.data:
-                dat[ int(float(str(self.event_adder.event_markers[0]))) , int(float(str(self.event_adder.event_markers[1]))) ]
-        
 
+                cur_data.append( dat[x1 : x2 ] )
+
+            self.event_adder.cur_data = cur_data
+
+            event_win = Toplevel(self.root)
+            event_win.title("Concatenate")
+            event_win.geometry("200x200")
+
+            save_button = Button( event_win , text="save concatanted file", 
+                                    command=self.event_adder.save,
+                                    image = self.icons.save)
+            name = Entry( event_win , textvariable=self.event_adder.event_name)
+            description = Entry( event_win , textvariable=self.event_adder.event_desc)
+
+            name.grid(row=0, column=0)
+            description.grid(row=1, column=0)
+            save_button.grid(row=2, column=0)
+        
+        
+        self.event_adder.event_flag[0] = ~self.event_adder.event_flag[0]
 
     def clear_space(self): #new
         self.canvas._tkcanvas.destroy()
@@ -339,8 +386,28 @@ class Channel_window:
 
         convert_ephys_nwb(self.nwb_obj, str(file.name) )
 
-    def position(self, event):
-        print(event.x)
+    def save_nwb(self):
+
+        self.io.write( self.nwb_obj )
+        self.io.close()
+        self.io = NWBHDF5IO( self.root_path , 'a')
+        self.nwb_obj = self.io.read()
+
+    def initial_pos(self, event):
+
+        if self.event_adder.event_flag[0] and event.y > self.event_adder.borders[2]:
+            self.event_adder.event_markers[0] = max(event.x - self.event_adder.borders[0], 0)
+
+    def final_pos(self, event):
+        if self.event_adder.event_flag[0]:
+            self.event_adder.event_markers[1] = min(event.x - self.event_adder.borders[0], 
+                                    self.event_adder.borders[1] - self.event_adder.borders[0] )
+            if self.event_adder.event_markers[1] < self.event_adder.event_markers[0]:
+                self.event_adder.event_markers[1] = self.event_adder.event_markers[0]+1
+
+            self.event_adder.event_flag[1]  = True
+            self.plot(True, None)
+
 
     def concatanate_data(self):
 
@@ -373,7 +440,7 @@ class Channel_window:
         x21_entry.grid(row=1, column=2)
         x22_entry.grid(row=2, column=2)
 
-    def settings(self):
+    def settings(self): 
 
         conc_win = Toplevel(self.root)
         conc_win.title("Settings")
@@ -461,6 +528,8 @@ class Channel_window:
             self.event_button.grid( row=0, column=11 )
             if self.from_ephys:
                 self.export.grid(row=1, column=1)
+            else:
+                self.save_button.grid(row=1, column=1)
 
 
             self.start_x_entry.grid(row=0, column=0)
@@ -487,6 +556,14 @@ class Channel_window:
         for i, dat in enumerate(self.data):
             a.plot( np.linspace(self.x1, self.zoom + self.x1, self.zoom ),
                 dat[ self.x1 : self.zoom + self.x1 ] , color = str(self.plot_line_color[i].get()) )
+            
+            if self.event_adder.event_flag[1] :
+                norm = self.zoom/(self.event_adder.borders[1] - self.event_adder.borders[0])
+                x1 = int(self.event_adder.event_markers[0] * norm) +self.x1
+                x2 = int(self.event_adder.event_markers[1] * norm) +self.x1
+                
+                a.axvline( x1 , linewidth=3.0 )
+                a.axvline( x2 , linewidth=3.0 )
 
             if spike is not None:
                 sam_len = spike.shape[0]
@@ -544,13 +621,13 @@ class GUI:
             initialdir='/',
             filetypes=filetypes)
 
-        dat, nwbfile = open_file(filename)
+        dat, nwbfile, io = open_file(filename)
 
         s = np.array(dat['spikes']) 
         if len(s) == 0:
             s = None
         self.channels = Channel_window( self.window, dat['continuous'], 0, 100, False, filename,
-                                        s, nwbfile)
+                                        s, nwbfile, io)
         
         
         self.plot_button.pack(side=LEFT, anchor=NW)
@@ -567,8 +644,8 @@ class GUI:
         if len(s) == 0:
             s = None
 
-        self.channels = Channel_window( self.window, dat['continuous'], 0, 100, False, filename,
-                                        s, nwbfile)
+        self.channels = Channel_window( self.window, dat['continuous'], 0, 100, True, filename,
+                                        s, nwbfile, None)
 
         self.plot_button.pack(side=LEFT, anchor=NW)
 

@@ -7,7 +7,7 @@ from OpenEphys import load
 from openephys2nwb import convertOpenEphystoNWB
 
 def open_file(dir):
-    io = NWBHDF5IO( dir , 'r')
+    io = NWBHDF5IO( dir , 'a')
     nwbfile = io.read()
 
     ephys_ts = nwbfile.acquisition
@@ -25,7 +25,7 @@ def open_file(dir):
     data['continuous'] = cont
     data['spikes'] = spikes
 
-    return data, nwbfile
+    return data, nwbfile, io
 
 def open_ephys_dir(dir):
 
