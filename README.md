@@ -24,4 +24,3 @@ current GUI
 
 - [x] button placement ( all square buttons at the top in one row. )
 - [x] add icons to buttons instead of title ( with hover over help feature )
-- [ ] fix framerate when zooming and panning.
