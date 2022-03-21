@@ -287,17 +287,22 @@ class Channel_window:
 
             event_win = Toplevel(self.root)
             event_win.title("Concatenate")
-            event_win.geometry("200x200")
+            event_win.geometry("250x100")
 
             save_button = Button( event_win , text="save concatanted file", 
                                     command=self.event_adder.save,
                                     image = self.icons.save)
             name = Entry( event_win , textvariable=self.event_adder.event_name)
             description = Entry( event_win , textvariable=self.event_adder.event_desc)
+            name_label = Label(event_win, text="event name")
+            description_label = Label(event_win, text="event description")
 
-            name.grid(row=0, column=0)
-            description.grid(row=1, column=0)
-            save_button.grid(row=2, column=0)
+            name.grid(row=0, column=1)
+            description.grid(row=1, column=1)
+            name_label.grid(row=0, column=0)
+            description_label.grid(row=1, column=0)
+
+            save_button.grid(row=2, column=1)
         
         
         self.event_adder.event_flag[0] = ~self.event_adder.event_flag[0]
@@ -413,7 +418,7 @@ class Channel_window:
 
         conc_win = Toplevel(self.root)
         conc_win.title("Concatenate")
-        conc_win.geometry("200x200")
+        conc_win.geometry("400x100")
 
         file1_button = Button( conc_win , text="selct file 1", command=self.select_file1,
                                 image = self.icons.file1)
@@ -431,14 +436,22 @@ class Channel_window:
         x21_entry = Entry( conc_win , textvariable=self.conc_files.x21)
         x22_entry = Entry( conc_win , textvariable=self.conc_files.x22)
 
-        file1_button.grid(row=0, column=1)
-        file2_button.grid(row=0, column=2)
-        metadata_button.grid(row=0, column=3)
-        save_button.grid(row=0, column=4)
-        x11_entry.grid(row=1, column=1)
-        x12_entry.grid(row=2, column=1)
-        x21_entry.grid(row=1, column=2)
-        x22_entry.grid(row=2, column=2)
+        file_start = Label(conc_win, text="file start")
+        file_end = Label(conc_win, text="file end")
+
+        file1_button.grid(row=0, column=2)
+        file2_button.grid(row=0, column=3)
+
+        file_start.grid(row=1, column=0)
+        file_end.grid(row=2, column=0)
+
+        metadata_button.grid(row=1, column=4)
+        save_button.grid(row=2, column=4)
+
+        x11_entry.grid(row=1, column=2)
+        x12_entry.grid(row=2, column=2)
+        x21_entry.grid(row=1, column=3)
+        x22_entry.grid(row=2, column=3)
 
     def settings(self): 
 
@@ -515,25 +528,31 @@ class Channel_window:
         if erase_bool == True:
             self.clear_space()
         else:
-            self.set_plot_window.grid(row=0, column=1)
-            self.zoom_button.grid(row=0, column=2)
-            self.zoom_in_button.grid(row=0, column=3)
-            self.pan_left_button.grid(row=0, column=4)
-            self.pan_right_button.grid(row=0, column=5)
-            self.clear_button.grid(row=0, column=6)
-            self.last_spike_button.grid( row=0, column=7 )
-            self.next_spike_button.grid( row=0, column=8 )
-            self.concatanate_button.grid( row=0, column=9 )
-            self.settings_button.grid( row=0, column=10 )
-            self.event_button.grid( row=0, column=11 )
+
+            start_label = Label(self.chan_frame, text="data start")
+            end_label = Label(self.chan_frame, text="data end")
+
+            start_label.grid(row=0, column=0)
+            end_label.grid(row=1, column=0)
+            self.set_plot_window.grid(row=0, column=2)
+            self.zoom_button.grid(row=0, column=3)
+            self.zoom_in_button.grid(row=0, column=4)
+            self.pan_left_button.grid(row=0, column=5)
+            self.pan_right_button.grid(row=0, column=6)
+            self.clear_button.grid(row=0, column=7)
+            self.last_spike_button.grid( row=0, column=8 )
+            self.next_spike_button.grid( row=0, column=9 )
+            self.concatanate_button.grid( row=0, column=10 )
+            self.settings_button.grid( row=0, column=11 )
+            self.event_button.grid( row=0, column=12 )
             if self.from_ephys:
-                self.export.grid(row=1, column=1)
+                self.export.grid(row=1, column=2)
             else:
-                self.save_button.grid(row=1, column=1)
+                self.save_button.grid(row=1, column=2)
 
 
-            self.start_x_entry.grid(row=0, column=0)
-            self.end_x_entry.grid(row=1, column=0)
+            self.start_x_entry.grid(row=0, column=1)
+            self.end_x_entry.grid(row=1, column=1)
 
         s2 = time.time()
 
@@ -576,7 +595,6 @@ class Channel_window:
 
         s4 = time.time()
 
-        #print(s1 - start, s2 - s1, s3-s2, s4-s3)
         
 
         
