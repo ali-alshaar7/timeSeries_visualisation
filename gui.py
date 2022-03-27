@@ -28,7 +28,7 @@ from openephys2nwb import readMetaData
 
 import time
 
-proj_root_dir = r"C:\Users\alish\Desktop\current_year\xcelleration\ts_visualisation"
+proj_root_dir = os.path.dirname(os.path.abspath(__file__))
 
 class Button_icons:
     def __init__( self ):
