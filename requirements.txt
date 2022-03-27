@@ -1,0 +1,7 @@
+matplotlib==3.4.3
+numpy==1.19.5
+Pillow==9.0.1
+pynwb==2.0.0
+python_dateutil==2.8.2
+scipy==1.7.1
+utils==1.0.1

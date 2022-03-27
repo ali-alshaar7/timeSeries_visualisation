@@ -1,7 +1,7 @@
 # timeSeries_visualisation
 
 <p align="center">
-  <img src="images/2.png" width="700" title="hover text">
+  <img src="images/3.png" width="700" title="hover text">
 </p>
 current GUI
 
@@ -24,4 +24,3 @@ current GUI
 
 - [x] button placement ( all square buttons at the top in one row. )
 - [x] add icons to buttons instead of title ( with hover over help feature )
-- [ ] fix framerate when zooming and panning.
