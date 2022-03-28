@@ -12,12 +12,12 @@ current GUI
 - [x] zoom
 - [x] pan across time series
 - [x] truncate to range
-- [ ] display multiple channels in parallel
+- [x] display multiple channels in parallel
 - [x] toggle grid lines
 - [x] select bakground/plot colour
 - [x] load Open Ephys directory
 - [x] Export to NWB feature
-- [ ] Concatanate time series
+- [x] Concatanate time series
 - [ ] toggle between seconds and samples in the x-axis.
 
 ### Optimizations and polishes- Todo list
