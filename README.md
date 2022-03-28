@@ -23,4 +23,5 @@ current GUI
 ### Optimizations and polishes- Todo list
 
 - [x] button placement ( all square buttons at the top in one row. )
-- [x] add icons to buttons instead of title ( with hover over help feature )
+- [ ] add icons to buttons instead of title ( with hover over help feature )
+- [ ] general performance improvement
