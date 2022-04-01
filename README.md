@@ -18,10 +18,12 @@ current GUI
 - [x] load Open Ephys directory
 - [x] Export to NWB feature
 - [x] Concatanate time series
-- [ ] toggle between seconds and samples in the x-axis.
+- [ ] toggle between seconds and samples in the x-axis
+- [ ] display file metadata
 
 ### Optimizations and polishes- Todo list
 
 - [x] button placement ( all square buttons at the top in one row. )
-- [ ] add icons to buttons instead of title ( with hover over help feature )
+- [x] add icons to buttons instead of title 
+- [ ] button hover over help feature
 - [ ] general performance improvement
