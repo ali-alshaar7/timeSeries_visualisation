@@ -1,4 +1,4 @@
-# timeSeries_visualisation
+# time_series_visualisation
 
 <p align="center">
   <img src="images/3.png" width="700" title="hover text">
